@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Webhook MacroDroid</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            text-align: center; 
+            margin: 20px; 
+            background-color: #121212; 
+            color: #ffffff;
+        }
+        .input-group { 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            margin: 10px 0; 
+        }
+        .input-group label { 
+            width: 150px; 
+            text-align: right; 
+            margin-right: 10px; 
+        }
+        input { 
+            width: 60%; 
+            padding: 10px; 
+            background-color: #1e1e1e;
+            color: #ffffff;
+            border: 1px solid #333;
+        }
+        button { 
+            padding: 10px 20px; 
+            cursor: pointer; 
+            background-color: #6200ea; 
+            color: white; 
+            border: none; 
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #3700b3;
+        }
+        .url-output { 
+            margin-top: 20px; 
+            font-size: 14px; 
+            word-break: break-all; 
+            background-color: #1e1e1e;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .chave-list { 
+            margin-top: 20px; 
+            max-height: 150px; 
+            overflow-y: auto;
+        }
+        .chave-item { 
+            padding: 8px;
+            background-color: #333;
+            margin-bottom: 5px;
+            border-radius: 5px;
+            display: flex;
+            justify-content: space-between;
+        }
+    </style>
+</head>
+<body>
+    <h2>Enviar Dados para Webhook MacroDroid</h2>
+    <div class="input-group">
+        <label for="webhookUrl">Webhook URL:</label>
+        <input type="text" id="webhookUrl" placeholder="Insira a URL da Webhook">
+    </div>
+    <div class="input-group">
+        <label for="senha">Senha do App:</label>
+        <input type="password" id="senha" placeholder="Senha do App">
+        <button onclick="toggleSenha()">👁️</button>
+    </div>
+    <div class="input-group">
+        <label for="ChavePix">Chave Pix:</label>
+        <input type="text" id="ChavePix" placeholder="Chave Pix">
+        <button onclick="adicionarChave()">Adicionar Chave</button>
+    </div>
+    <div class="input-group">
+        <label for="Valor">Valor (em reais):</label>
+        <input type="text" id="Valor" placeholder="Valor" oninput="formatarValor()">
+    </div>
+    <button onclick="enviarDados()">Enviar</button>
+    <button onclick="limparDados()">Limpar Dados</button>
+    
+    <div id="urlDisplay" class="url-output"></div>
+
+    <div class="chave-list" id="chaveList"></div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            document.getElementById('webhookUrl').value = 'https://trigger.macrodroid.com/0e33222b-ed17-41be-8928-411a0ed8b7e1/Sicredi' || '';
+            document.getElementById('senha').value = localStorage.getItem('senha') || '';
+            document.getElementById('ChavePix').value = localStorage.getItem('ChavePix') || '';
+            document.getElementById('Valor').value = localStorage.getItem('Valor') || '';
+            carregarChaves();
+        });
+        
+        function toggleSenha() {
+            const senhaInput = document.getElementById('senha');
+            senhaInput.type = senhaInput.type === 'password' ? 'text' : 'password';
+        }
+
+        function formatarValor() {
+            let valorInput = document.getElementById('Valor');
+            let valor = valorInput.value;
+
+            // Remove tudo que não for número ou ponto
+            valor = valor.replace(/[^\d.]/g, '');
+
+            // Limita a quantidade de casas decimais a 2
+            if (valor.includes('.')) {
+                valor = valor.substring(0, valor.indexOf('.') + 3);
+            }
+
+            valorInput.value = valor;
+        }
+
+        function enviarDados() {
+            const urlBase = document.getElementById('webhookUrl').value;
+            const senha = document.getElementById('senha').value;
+            const chavePix = document.getElementById('ChavePix').value;
+            let valor = document.getElementById('Valor').value;
+		
+            if (!urlBase || !senha || !chavePix || !valor) {
+                alert('Preencha todos os campos!');
+                return;
+            }
+
+            // Remove a formatação de moeda e converte para centavos
+            valor = valor.replace(/[^\d]/g, ''); // Remove qualquer caractere que não seja número
+            valor = parseFloat(valor); // Converte para número
+            valor = Math.round(valor * 100); // Multiplica por 100 para representar em centavos e arredonda
+
+            localStorage.setItem('webhookUrl', urlBase);
+            localStorage.setItem('senha', senha);
+            localStorage.setItem('ChavePix', chavePix);
+            localStorage.setItem('Valor', valor);
+
+            let urlFinal = `${urlBase}?senhaDoApp=${encodeURIComponent(senha)}&ChavePix=${encodeURIComponent(chavePix)}&Valor=${valor}`;
+            document.getElementById('urlDisplay').innerText = `URL Gerada: ${urlFinal}`;
+            
+            fetch(urlFinal, { method: 'GET' })
+                .then(response => {
+                    if (response.ok) {
+                        alert('Webhook enviada com sucesso!');
+                    } else {
+                        alert('Erro ao enviar webhook: ' + response.statusText);
+                    }
+                })
+                .catch(error => alert('Erro ao enviar webhook: ' + error.message));
+        }
+
+        function limparDados() {
+            localStorage.removeItem('webhookUrl');
+            localStorage.removeItem('senha');
+            localStorage.removeItem('ChavePix');
+            localStorage.removeItem('Valor');
+            document.getElementById('webhookUrl').value = '';
+            document.getElementById('senha').value = '';
+            document.getElementById('ChavePix').value = '';
+            document.getElementById('Valor').value = '';
+            document.getElementById('urlDisplay').innerText = '';
+        }
+
+        function adicionarChave() {
+            const chavePix = document.getElementById('ChavePix').value;
+            const nomePessoa = prompt("Informe o nome da pessoa para essa chave:");
+
+            if (chavePix && nomePessoa) {
+                // Adiciona chave e nome à lista de chaves
+                let chaves = JSON.parse(localStorage.getItem('chavesPix') || '[]');
+                chaves.push({ chave: chavePix, nome: nomePessoa });
+                // Salva as chaves no localStorage
+                localStorage.setItem('chavesPix', JSON.stringify(chaves));
+                carregarChaves();
+            } else {
+                alert('Informe uma chave Pix válida e o nome da pessoa.');
+            }
+        }
+
+        function carregarChaves() {
+            const chaveList = document.getElementById('chaveList');
+            chaveList.innerHTML = ''; // Limpa a lista antes de recarregar
+
+            let chaves = JSON.parse(localStorage.getItem('chavesPix') || '[]');
+            // Ordena as chaves, colocando as mais usadas no topo
+            chaves.sort((a, b) => b.usos - a.usos);
+
+            // Exibe as chaves
+            chaves.forEach(chave => {
+                let chaveItem = document.createElement('div');
+                chaveItem.className = 'chave-item';
+                chaveItem.innerHTML = `${chave.nome}: ${chave.chave} <button onclick="usarChave('${chave.chave}')">Usar</button>`;
+                chaveList.appendChild(chaveItem);
+            });
+        }
+
+        function usarChave(chave) {
+            document.getElementById('ChavePix').value = chave;
+        }
+    </script>
+</body>
+</html>
